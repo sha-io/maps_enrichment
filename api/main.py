@@ -63,7 +63,7 @@ async def load_geodata_csv():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await load_geodata_excel()
+    await load_geodata_csv()
     yield
 
 
