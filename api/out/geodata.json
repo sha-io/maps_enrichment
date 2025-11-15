@@ -41,7 +41,7 @@
                 "osm_type": "way",
                 "company_name": "TAILSCO LIMITED",
                 "entity_type": "Subsidiary",
-                "address": "13, Dynevor Road, North Sheen, London Borough of Richmond upon Thames, London, Greater London, England, TW10 6PF, United Kingdom",
+                "address": "13, Dynevor Road, North Sheen, Richmond, London Borough of Richmond upon Thames, Greater London, England, TW10 6PF, United Kingdom",
                 "country_code": "gb",
                 "country": "United Kingdom"
             }
@@ -361,7 +361,7 @@
                 "osm_type": "way",
                 "company_name": "NESTLE PURINA UK MANUFACTURING OPERATIONS LIMITED",
                 "entity_type": "Branch",
-                "address": "50, Burlington Road, New Malden, Royal Borough of Kingston upon Thames, London, Greater London, England, KT3 4NU, United Kingdom",
+                "address": "50, Burlington Road, New Malden, Royal Borough of Kingston upon Thames, Greater London, England, KT3 4NU, United Kingdom",
                 "country_code": "gb",
                 "country": "United Kingdom"
             }
@@ -645,7 +645,7 @@
                 "osm_type": "way",
                 "company_name": "LILY'S KITCHEN LIMITED",
                 "entity_type": "Subsidiary",
-                "address": "CHIEF, 22, Bedford Square, St Giles, Bloomsbury, London Borough of Camden, London, Greater London, England, WC1B 3JA, United Kingdom",
+                "address": "CHIEF, 22, Bedford Square, Bloomsbury, Camden Town, London Borough of Camden, Greater London, England, WC1B 3JA, United Kingdom",
                 "country_code": "gb",
                 "country": "United Kingdom"
             }
@@ -2076,7 +2076,7 @@
                 "osm_type": "way",
                 "company_name": "NESTLE UK LTD.",
                 "entity_type": "Branch",
-                "address": "Hilltop Industrial Estate, Bardon Road, Bardon, North West Leicestershire, Leicestershire, England, LE67 1UD, United Kingdom",
+                "address": "Hilltop Industrial Estate, West Lane, Bardon 22 Industrial Estate, Ellistown and Battleflat, North West Leicestershire, Leicestershire, England, LE67 1LA, United Kingdom",
                 "country_code": "gb",
                 "country": "United Kingdom"
             }

@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from config import GEODATA_PATH
+from api.config import GEODATA_PATH
 
 async def load_geodata():
     try:

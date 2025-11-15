@@ -4,10 +4,10 @@ import os
 import json
 
 from fastapi import FastAPI
-from routes.geodata import router as polygon_router
+from api.routes.geodata import router as polygon_router
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from config import  GEODATA_PATH, LOCATIONS_PATH_EXCEL, LOCATIONS_PATH_CSV
+from api.config import  GEODATA_PATH, LOCATIONS_PATH_EXCEL, LOCATIONS_PATH_CSV
 
 
 async def load_geodata_excel():
@@ -74,6 +74,8 @@ app = FastAPI(lifespan=lifespan)
 #     "http://localhost:5173",  
 #     "http://127.0.0.1:5173",  
 # ]
+
+
 
 app.add_middleware(
     CORSMiddleware,
