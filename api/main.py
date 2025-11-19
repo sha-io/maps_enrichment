@@ -1,3 +1,4 @@
+import pycountry
 import api.geocode.geocode_utils as osm
 import time
 import os
@@ -39,31 +40,54 @@ async def load_geodata_excel():
                 print(f"Successfully dumped JSON data to {GEODATA_PATH}")
 
 async def load_geodata_csv():
-    if not os.path.exists(GEODATA_PATH):
-        output = {}
-        df = osm.get_filtered_dataset(LOCATIONS_PATH_CSV, "`Country/Region` == 'United Kingdom'", 'csv')
-        if df is not None:
-            for _, rows in df.iterrows():
-                lon = rows["Longitude"]
-                lat = rows["Latitude"]
-                data = osm.geocode_nominatim_boundary(lat, lon)
-                time.sleep(1) # avoid rate limiting
-                if type(data) is osm.GeoData:
-                    # Seed data with company-specific info to properties
-                    data.properties.company_name = rows['Company Name']
-                    data.properties.entity_type = rows["Entity Type"]
-                    # Create feature collection
-                    output['type'] = "FeatureCollection"
-                    if 'features' not in output:
-                        output['features'] = []
-                    output['features'].append(data.model_dump())
-            with open(GEODATA_PATH, "w") as geocode:
-                json.dump(output, geocode, indent=4)
+    output = []
+    df = osm.get_filtered_dataset(LOCATIONS_PATH_CSV, "`Country/Region` == 'United Kingdom'", 'csv')
+    if df is not None:
+        for _, rows in df.iterrows():
+            lon = rows["Longitude"]
+            lat = rows["Latitude"]
+            data = osm.geocode_nominatim_boundary(lat, lon)
+            time.sleep(1) # avoid rate limiting
+            if type(data) is osm.GeoData:
+                # Seed data with company-specific info to properties
+                data.properties.company_name = rows['Company Name'].capitalize()
+                data.properties.entity_type = rows["Entity Type"].capitalize()
+                # Create feature collection
+                output.append(data.model_dump())
+    return output
 
+
+async def get_us_locations(filter: str):
+    us_states = [sub.code for sub in pycountry.subdivisions if sub.country_code == "US"] # type: ignore
+    output = []
+    for state in us_states:
+        data = osm.overpass_get_locations(state, filter)
+        if type(data) is list:
+            for feature in data:
+                output.append(feature.model_dump())
+    return output
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await load_geodata_csv()
+    if not os.path.exists(GEODATA_PATH):
+        output = {}
+        csv_data = await load_geodata_csv()
+        overpass_data = await get_us_locations("Nestl(e[\u0301]?|é)( Purina)?|Nespresso")
+        
+        for feature in csv_data:
+            output['type'] = "FeatureCollection"
+            if 'features' not in output:
+                output['features'] = []
+            output['features'].append(feature)
+
+        for feature in overpass_data:
+            output['type'] = "FeatureCollection"
+            if 'features' not in output:
+                output['features'] = []
+            output['features'].append(feature)
+
+        with open(GEODATA_PATH, "w") as geocode:
+            json.dump(output, geocode, indent=4)
     yield
 
 

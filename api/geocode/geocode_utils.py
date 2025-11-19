@@ -1,15 +1,16 @@
 import pandas as pd
+import pycountry
 import requests as fetch
 from pydantic import BaseModel
 from pathlib import Path
-from typing import Literal
+from typing import List, Literal, Union
 from openlocationcode import openlocationcode as olc
 from shapely import MultiPolygon
 from shapely.geometry import Point, Polygon
 
 NOMINATIM_REVERSE_GEOCODING_URL = "https://nominatim.openstreetmap.org/reverse"
 UNITED_KINGDOM_POSTCODES_API_URL = "https://api.postcodes.io/postcodes/"
-OVERPASS_API_URL = "https://overpass.openstreetmap.fr/api/interpreter"
+OVERPASS_API_URL = "https://overpass.private.coffee/api/interpreter"
 
 
 class RuntimeInfo(BaseModel):
@@ -17,7 +18,10 @@ class RuntimeInfo(BaseModel):
 
 class Geometry(BaseModel):
     type: str
-    coordinates: list[list[list[float]] |list[list[list[float]]]]
+    coordinates: Union[
+        List[List[List[float]]],      
+        List[List[List[List[float]]]] 
+    ]
 
 class Properties(BaseModel):
     osm_id: int | None = None
@@ -31,7 +35,7 @@ class Properties(BaseModel):
 class GeoData(BaseModel):
     type: str = "Feature"
     geometry: Geometry
-    bbox: list[float]|None = None
+    bbox: list[float] | None = None
     properties: Properties
 
 
@@ -172,7 +176,7 @@ def geocode_nominatim_boundary(lat: float, lon: float) -> GeoData | RuntimeInfo:
             "zoom": 18,
             "accept-language": "en",
         },
-        "timeout": 5,
+        "timeout": 25,
         "headers": {"User-Agent": "Nestle-Location-Intelligence-POC/1.0"},
     }
     try:
@@ -193,7 +197,6 @@ def geocode_nominatim_boundary(lat: float, lon: float) -> GeoData | RuntimeInfo:
 
             properties = result.get("properties", {})
 
-            display_name = properties.get("display_name", "")
             address = properties.get("address", {})
             osm_id = properties.get("osm_id", "")
             osm_type = properties.get("osm_type", "")
@@ -201,6 +204,21 @@ def geocode_nominatim_boundary(lat: float, lon: float) -> GeoData | RuntimeInfo:
             country = address.get("country", "")
             country_code = address.get("country_code", "")
 
+            keys = [
+                    "city",
+                    "town",
+                    "village",
+                    "hamlet",
+                    "suburb",
+                    "borough",
+                    "county"  
+                    ]
+            
+            display_name = f'{country}' # fallback 
+            for key in keys:
+                if key in address:
+                    display_name = f'{address[key]}, {country}'
+        
             props = Properties(
                 osm_id=osm_id,
                 osm_type=osm_type,
@@ -217,8 +235,81 @@ def geocode_nominatim_boundary(lat: float, lon: float) -> GeoData | RuntimeInfo:
             return GeoData(geometry=Geometry(**geometry), bbox=bbox, properties=props)
 
     except Exception as e:
-        RuntimeInfo(message=f"An error has occured: , {e}")
+        return RuntimeInfo(message=f"An error has occured: , {e}")
 
     return RuntimeInfo(message="No Operation Performed.")
 
+@logger
+def overpass_get_locations(country_code: str, regex: str, timeout: int = 1200):
+    query = """
+            [out:json][timeout:{timeout}];
+            area["ISO3166-2"="{country_code}"]->.searchArea;
+            (
+            way["brand"~"{name}"]["highway"!~"."](area.searchArea);
+            way["name"~"{name}"]["highway"!~"."](area.searchArea);
+            relation["brand"~"{name}"]["highway"!~"."](area.searchArea);
+            relation["name"~"{name}"]["highway"!~"."](area.searchArea);
+            );
+            out geom;
+            """
+    query = query.format(timeout=timeout, country_code=country_code, name=regex)
+    
+    header = {"User-Agent": "Nestle-Location-Intelligence-POC/1.0"}
+    try:
+        print(f"Searching {country_code}")
+        response = fetch.post(OVERPASS_API_URL, data=query, headers=header)
+        response.raise_for_status()
+        print(f'Status Code:{response.status_code}')
+        data = response.json()
+        features = []
+        count = 0
+        if data:
+            for el in data["elements"]:
+                coords = []
+                geom_type = None
+                # Single polygon (way)
+                if el["type"] == "way":
+                    geom_type = 'Polygon'
+                    coords = [[p["lon"], p["lat"]] for p in el["geometry"]]
+                    if coords[0] != coords[-1]:
+                        coords.append(coords[0])  # close polygon if necessary
+
+                # Multiple Polygons (relations)
+                if el["type"] == "relation":
+                    geom_type = 'MultiPolygon'
+                    member_polygons = []
+                    for member in el.get("members", []):
+                        if member["type"] != "way" or "geometry" not in member:
+                            continue
+                        member_coords = [[p["lon"], p["lat"]] for p in member["geometry"]]
+                        if member_coords[0] != member_coords[-1]:
+                            member_coords.append(member_coords[0])
+                        member_polygons.append(member_coords) 
+                    coords = member_polygons  
+                    
+                if geom_type and coords:                
+                        tags = el.get("tags", {})
+                        
+                        company_name = tags.get('name') or tags.get('brand', '')
+                        country = c.name if (c := pycountry.countries.get(alpha_2=country_code.split("-")[0])) else ""                
+                        city = c.name if ( c:= pycountry.subdivisions.get(code=country_code)) else '' # type: ignore
+                        
+                        address = f'{city}, {country}'
+                        
+                        props = Properties(
+                            osm_id=el.get("id", ""),
+                            company_name=company_name,
+                            entity_type='Branch', # Tag all as branch as placeholder
+                            country_code=country_code.split('-')[0],
+                            country=country,
+                            address=address
+                            )
+                        print(f'Feature Type: {geom_type}, OSM ID: {el.get("id", "")}')
+                        geodata = GeoData(properties=props, geometry=Geometry(type=geom_type, coordinates=[coords]))
+                        features.append(geodata)
+                        count += 1
+        print(f'Found: {count}')
+        return features
+    except Exception as e:
+        print(f"An error has occured: {e}")
 

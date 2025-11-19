@@ -6,3 +6,4 @@ requests
 pandas
 shapely
 dotenv
+pycountry

@@ -11,8 +11,8 @@ function addMarkers(data: FeatureCollection<Geometry, GeoJsonProperties> | null,
         const center = centroid(feature.geometry)
         const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
             `Company Name: ${feature.properties?.company_name || 'N/A'}<br/>
-                 Entity Type: ${feature.properties?.entity_type || 'N/A'}<br/>
-                 Country: ${feature.properties?.country || 'N/A'}`
+             Entity Type: ${feature.properties?.entity_type || 'N/A'}<br/>
+                 `
         );
         new maplibregl.Marker()
             .setLngLat(center.geometry.coordinates as [number, number])
@@ -49,8 +49,8 @@ export default function Map() {
                 type: 'fill',
                 source: 'company-locations',
                 paint: {
-                    'fill-color': 'grey',
-                    'fill-opacity': 0.3,
+                    'fill-color': 'red',
+                    'fill-opacity': 0.5,
                 }
             });
     }, [map, geojson])
