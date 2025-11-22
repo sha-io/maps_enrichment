@@ -1,11 +1,10 @@
 import pycountry
-import geocode.geocode_utils as osm
+import api.geocode.geocode_utils as osm
 import time
 import os
 import json
 
 # All imports with api.* are added for production purposes as imports fail without it
-
 from fastapi import FastAPI
 from api.routes.geodata import router as polygon_router
 from contextlib import asynccontextmanager
